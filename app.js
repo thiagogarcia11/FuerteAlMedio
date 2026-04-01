@@ -116,7 +116,13 @@ function abrirModal(prod) {
   modalMarca.textContent     = prod.marca;
   modalNombre.textContent    = prod.modelo;
   modalColorTipo.textContent = `${prod.color} · ${tipoTexto}`;
-  modalPrecio.textContent    = `$ ${prod.precio.toLocaleString("es-UY")}`;
+  if (prod.tipo === "11") {
+    modalColorTipo.textContent += "$6290";
+  } else if (prod.tipo === "5" || prod.tipo === "sala") {
+    modalColorTipo.textContent += "$5390";
+  } else {
+    modalPrecio.textContent = `$ Consultar precio`;
+  }
   modalDescripcion.textContent = prod.descripcion || "Champión importado de calidad AAA.";
 
   // Fotos
@@ -235,7 +241,7 @@ modalBtnWsp.addEventListener("click", () => {
                   : prod.tipo === "5"  ? "Fútbol 5"
                   : "Futsal / Sala";
 
-  const mensaje = `Hola, quiero el ${prod.marca} ${prod.modelo} ${prod.color} ${tipoTexto} talle ${talle}`;
+  const mensaje = `Hola! Me interesan los ${prod.marca} ${prod.modelo} ${prod.color} (${tipoTexto}) en el talle ${talle}. ¿Tenés disponible?`;
   const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, "_blank");
 });
