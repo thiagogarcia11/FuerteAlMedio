@@ -60,7 +60,6 @@ function renderProductos(lista) {
   contador.textContent = `${lista.length} producto${lista.length !== 1 ? "s" : ""}`;
 
   lista.forEach(p => {
-    // Usa la primera imagen del array como thumbnail
     const thumb = Array.isArray(p.imagenes) && p.imagenes.length > 0
       ? p.imagenes[0]
       : "img/placeholder.jpg";
@@ -88,10 +87,8 @@ function renderProductos(lista) {
     grilla.appendChild(card);
   });
 
-  // Click en la card o en "Ver" abre el modal
   document.querySelectorAll(".card").forEach(card => {
     card.addEventListener("click", (e) => {
-      // Evita doble disparo si clickearon el botón
       const id = e.currentTarget.dataset.id;
       const prod = productos.find(p => p.id === id);
       if (prod) abrirModal(prod);
@@ -112,7 +109,6 @@ function abrirModal(prod) {
                   : prod.tipo === "5"  ? "Fútbol 5"
                   : "Futsal / Sala";
 
-  // Info textual
   modalMarca.textContent     = prod.marca;
   modalNombre.textContent    = prod.modelo;
   modalColorTipo.textContent = `${prod.color} · ${tipoTexto}`;
@@ -125,20 +121,15 @@ function abrirModal(prod) {
   }
   modalDescripcion.textContent = prod.descripcion || "Champión importado de calidad AAA.";
 
-  // Fotos
   const imagenes = Array.isArray(prod.imagenes) && prod.imagenes.length > 0
     ? prod.imagenes
     : ["img/placeholder.jpg"];
 
   renderFotos(imagenes);
-
-  // Talles
   renderTallesModal(prod);
 
-  // Botón WhatsApp — deshabilitado hasta elegir talle
   modalBtnWsp.disabled = true;
 
-  // Mostrar modal
   modalOverlay.classList.add("activo");
   document.body.style.overflow = "hidden";
 }
@@ -150,13 +141,10 @@ function cerrarModal() {
   modalState.talleSeleccionado = null;
 }
 
-// ── Fotos: foto grande + miniaturas ──
 function renderFotos(imagenes) {
-  // Foto grande
   modalFotoGrande.src = imagenes[modalState.fotoIndex];
   modalFotoGrande.alt = "";
 
-  // Miniaturas
   modalMiniaturas.innerHTML = "";
   imagenes.forEach((src, i) => {
     const img = document.createElement("img");
@@ -166,7 +154,6 @@ function renderFotos(imagenes) {
     modalMiniaturas.appendChild(img);
   });
 
-  // Flechas: ocultar si hay una sola foto
   const hayMas = imagenes.length > 1;
   modalPrev.style.display = hayMas ? "flex" : "none";
   modalNext.style.display = hayMas ? "flex" : "none";
@@ -178,7 +165,6 @@ function cambiarFoto(nuevoIndex) {
   renderFotos(imagenes);
 }
 
-// ── Talles en el modal (con toggle) ──
 function renderTallesModal(prod) {
   modalTalles.innerHTML = "";
   prod.talles.forEach(t => {
@@ -190,7 +176,6 @@ function renderTallesModal(prod) {
     btn.addEventListener("click", () => {
       const yaSeleccionado = modalState.talleSeleccionado === t;
 
-      // Toggle: si ya estaba seleccionado, deselecciona
       if (yaSeleccionado) {
         modalState.talleSeleccionado = null;
         btn.classList.remove("seleccionado");
@@ -207,20 +192,16 @@ function renderTallesModal(prod) {
   });
 }
 
-// ── Eventos fijos del modal ──
 modalCerrar.addEventListener("click", cerrarModal);
 
-// Cerrar al clickear el overlay (fuera del contenido)
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) cerrarModal();
 });
 
-// Cerrar con Escape
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") cerrarModal();
 });
 
-// Flechas
 modalPrev.addEventListener("click", (e) => {
   e.stopPropagation();
   cambiarFoto(modalState.fotoIndex - 1);
@@ -231,7 +212,6 @@ modalNext.addEventListener("click", (e) => {
   cambiarFoto(modalState.fotoIndex + 1);
 });
 
-// Botón WhatsApp del modal
 modalBtnWsp.addEventListener("click", () => {
   const prod  = modalState.producto;
   const talle = modalState.talleSeleccionado;
@@ -259,9 +239,13 @@ function productosFiltrados() {
   });
 }
 
-// ── Poblar marcas únicas ──
+// ── Poblar marcas únicas (filtradas por tipo activo) ──
 function poblarMarcas() {
-  const marcas = [...new Set(productos.map(p => p.marca))].sort();
+  const base = filtros.tipo === "todos"
+    ? productos
+    : productos.filter(p => p.tipo === filtros.tipo);
+
+  const marcas = [...new Set(base.map(p => p.marca))].sort();
 
   listaMarcas.innerHTML = `<li><button class="filtro-btn activo" data-filtro="marca" data-valor="todas">Todas</button></li>`;
   marcas.forEach(m => {
@@ -269,15 +253,19 @@ function poblarMarcas() {
   });
 }
 
-// ── Poblar modelos según marca activa ──
+// ── Poblar modelos según marca activa (filtrados por tipo activo) ──
 function poblarModelos(marca) {
   if (marca === "todas") {
     secModelos.style.display = "none";
     return;
   }
 
+  const base = filtros.tipo === "todos"
+    ? productos
+    : productos.filter(p => p.tipo === filtros.tipo);
+
   const modelos = [...new Set(
-    productos.filter(p => p.marca === marca).map(p => p.modelo)
+    base.filter(p => p.marca === marca).map(p => p.modelo)
   )].sort();
 
   listaModelos.innerHTML = `<li><button class="filtro-btn activo" data-filtro="modelo" data-valor="todos">Todos</button></li>`;
@@ -306,12 +294,17 @@ function asignarEventosFiltros() {
       marcarActivo(btn);
 
       if (filtro === "tipo") {
-        filtros.tipo = valor;
+        filtros.tipo   = valor;
+        filtros.marca  = "todas";
+        filtros.modelo = "todos";
+        poblarMarcas();
+        secModelos.style.display = "none";
+        asignarEventosFiltros();
       }
 
       if (filtro === "marca") {
         filtros.marca  = valor;
-        filtros.modelo = "todos"; // resetea modelo al cambiar marca
+        filtros.modelo = "todos";
         poblarModelos(valor);
       }
 
@@ -329,9 +322,7 @@ function asignarEventosFiltros() {
 // ============================================================
 
 function init() {
-  // Ordena destacados primero
   productos.sort((a, b) => b.destacado - a.destacado);
-
   poblarMarcas();
   asignarEventosFiltros();
   renderProductos(productos);
@@ -368,21 +359,23 @@ function cerrarSheet() {
 
 // Sincroniza el estado actual de los filtros al abrir el sheet
 function sincronizarSheet() {
-  // Marcas
-  const marcas = [...new Set(productos.map(p => p.marca))].sort();
+  // Marcas filtradas por tipo activo
+  const base = filtros.tipo === "todos"
+    ? productos
+    : productos.filter(p => p.tipo === filtros.tipo);
+
+  const marcas = [...new Set(base.map(p => p.marca))].sort();
   sheetListaMarcas.innerHTML = `<li><button class="filtro-btn${filtros.marca === "todas" ? " activo" : ""}" data-filtro="marca" data-valor="todas" data-sheet="true">Todas</button></li>`;
   marcas.forEach(m => {
     sheetListaMarcas.innerHTML += `<li><button class="filtro-btn${filtros.marca === m ? " activo" : ""}" data-filtro="marca" data-valor="${m}" data-sheet="true">${m}</button></li>`;
   });
 
-  // Modelos (si hay marca activa)
   if (filtros.marca !== "todas") {
     poblarModelosSheet(filtros.marca);
   } else {
     sheetSecModelos.style.display = "none";
   }
 
-  // Marcar tipo activo
   document.querySelectorAll("#sheet-lista-tipo .filtro-btn").forEach(btn => {
     btn.classList.toggle("activo", btn.dataset.valor === filtros.tipo);
   });
@@ -391,8 +384,13 @@ function sincronizarSheet() {
 }
 
 function poblarModelosSheet(marca) {
+  // Modelos filtrados por tipo activo
+  const base = filtros.tipo === "todos"
+    ? productos
+    : productos.filter(p => p.tipo === filtros.tipo);
+
   const modelos = [...new Set(
-    productos.filter(p => p.marca === marca).map(p => p.modelo)
+    base.filter(p => p.marca === marca).map(p => p.modelo)
   )].sort();
 
   sheetListaModelos.innerHTML = `<li><button class="filtro-btn${filtros.modelo === "todos" ? " activo" : ""}" data-filtro="modelo" data-valor="todos" data-sheet="true">Todos</button></li>`;
@@ -406,17 +404,22 @@ function poblarModelosSheet(marca) {
 
 function asignarEventosSheet() {
   filtrosSheet.querySelectorAll(".filtro-btn[data-sheet]").forEach(btn => {
-    // Clonar para evitar listeners duplicados
     const nuevo = btn.cloneNode(true);
     btn.replaceWith(nuevo);
     nuevo.addEventListener("click", () => {
       const { filtro, valor } = nuevo.dataset;
 
-      // Marcar activo dentro del sheet
       filtrosSheet.querySelectorAll(`.filtro-btn[data-filtro="${filtro}"]`).forEach(b => b.classList.remove("activo"));
       nuevo.classList.add("activo");
 
-      if (filtro === "tipo")   filtros.tipo = valor;
+      if (filtro === "tipo") {
+        filtros.tipo   = valor;
+        filtros.marca  = "todas";
+        filtros.modelo = "todos";
+        sincronizarSheet();
+        return;
+      }
+
       if (filtro === "marca") {
         filtros.marca  = valor;
         filtros.modelo = "todos";
@@ -426,9 +429,9 @@ function asignarEventosSheet() {
           poblarModelosSheet(valor);
         }
       }
+
       if (filtro === "modelo") filtros.modelo = valor;
 
-      // Actualizar contador del botón aplicar
       const n = productosFiltrados().length;
       sheetAplicar.textContent = `Ver ${n} resultado${n !== 1 ? "s" : ""}`;
     });
@@ -447,7 +450,6 @@ sheetLimpiar.addEventListener("click", () => {
 
 // Aplicar y cerrar
 sheetAplicar.addEventListener("click", () => {
-  // Sincronizar botones del sidebar desktop también
   sincronizarSidebar();
   renderProductos(productosFiltrados());
   cerrarSheet();
